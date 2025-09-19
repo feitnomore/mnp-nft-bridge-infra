@@ -1,0 +1,101 @@
+# Copyright 2025 Marcelo Parisi (github.com/feitnomore)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: deploy-controller-kubevirt
+  namespace: mnp-cicd
+spec:
+  description: Deploys and restarts our image on cluster
+  params:
+    - name: IMAGE_REGISTRY
+      description: The registry URL.
+      type: string
+    - name: CLI_IMAGE_NAME
+      description: image name.
+      type: string
+    - name: CLI_IMAGE_TAG
+      description: image tag.
+      type: string
+    - name: CRTL_IMAGE_NAME
+      description: image name.
+      type: string
+    - name: CRTL_IMAGE_TAG
+      description: image tag.
+      type: string
+    - name: test-lane
+      description: "test lane to be executed"
+      default: "1-31"
+    - name: app-repo-revision
+      description: Git branch
+      default: "main"
+
+  steps:
+    - name: deploy-controller
+      image: $(params.IMAGE_REGISTRY)/$(params.CLI_IMAGE_NAME):$(params.CLI_IMAGE_TAG)
+      imagePullPolicy: Always
+      env:
+        - name: LANE
+          value: "$(params.test-lane)"
+        - name: GIT_BRANCH
+          value: "$(params.app-repo-revision)"
+      volumeMounts:
+        - name: kubeconfigs
+          mountPath: /root/.kube/
+        - name: lane-config
+          mountPath: /root/.config/
+      script: |
+        #!/bin/bash
+        set -e
+
+        export HOST_IP=`cat /root/.config/config.ini | grep $(params.test-lane) | cut -d : -f 2 | awk '{print $1}'`
+        export KUBECTL="kubectl --kubeconfig=/root/.kube/kubeconfig-$(params.test-lane)"
+        export KUBECONFIG="/root/.kube/kubeconfig-$(params.test-lane)"
+
+        echo "===================================="
+        echo "Kubernetes Lane: ${LANE}"
+        echo "Kubernetes IP: ${HOST_IP}"
+        echo "Branch/Tag: ${GIT_BRANCH}"
+        echo "===================================="
+
+        ${KUBECTL} set image "ds/mnp-nft-bridge" "mnp-nft-bridge=$(params.IMAGE_REGISTRY)/$(params.CRTL_IMAGE_NAME):$(params.CRTL_IMAGE_TAG)" -n kube-system
+        sleep 5s
+        ${KUBECTL} get pods -A | grep mnp | awk '{system("${KUBECTL} delete pod " $2 " -n kube-system --force")}'
+        
+        echo "--- Waiting for mnp-nft-bridge controller to be ready..."
+        sleep 10s
+        ${KUBECTL}  -n kube-system wait --for=condition=Ready pod -l app=mnp-nft-bridge --timeout=3m
+
+
+  volumes:
+    - name: kubeconfigs
+      secret:
+        secretName: lane-configs
+        defaultMode: 0600
+        items:
+          - key: kubeconfig-1-31
+            path: kubeconfig-1-31
+          - key: kubeconfig-1-32
+            path: kubeconfig-1-32
+          - key: kubeconfig-1-33
+            path: kubeconfig-1-33
+          - key: status
+            path: status
+    - name: lane-config
+      configMap:
+        name: lane-config
+        items:
+          - key: config.ini
+            path: config.ini

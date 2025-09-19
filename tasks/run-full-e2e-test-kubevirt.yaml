@@ -1,0 +1,121 @@
+# Copyright 2025 Marcelo Parisi (github.com/feitnomore)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: run-full-e2e-test-kubevirt
+  namespace: mnp-cicd
+spec:
+  description: E2E test execution task
+  params:
+    - name: IMAGE_REGISTRY
+      description: The registry URL.
+      type: string
+    - name: IMAGE_NAME
+      description: image name.
+      type: string
+    - name: IMAGE_TAG
+      description: image tag.
+      type: string
+    - name: scenario-name
+      description: "The name of the scenario directory to run."
+    - name: test-lane
+      description: "test lane to be executed"
+      default: "1-31"
+
+  workspaces:
+    - name: source
+      description: "Workspace containing the mnp-nft-bridge source code."
+    - name: shared-output
+      description: "Workspace for storing logs and output files."
+
+  results:
+    - name: status
+      description: "The execution status of the test scenario (PASSED or FAILED)."
+
+  steps:
+    - name: execute-scenario
+      image: $(params.IMAGE_REGISTRY)/$(params.IMAGE_NAME):$(params.IMAGE_TAG)
+      imagePullPolicy: Always
+      env:
+        - name: LANE
+          value: "$(params.test-lane)"
+        - name: SCENARIO_DIR
+          value: "$(workspaces.source.path)/mnp-nft-bridge/test/e2e/scenarios/$(params.scenario-name)"
+      volumeMounts:
+        - name: kubeconfigs
+          mountPath: /root/.kube/
+        - name: ssh-keys
+          mountPath: /root/.ssh/
+        - name: lane-config
+          mountPath: /root/.config/
+      script: |
+        #!/bin/bash
+        set -e
+
+        export KUBECTL="kubectl --kubeconfig=/root/.kube/kubeconfig-$(params.test-lane)"
+        export KUBECONFIG="/root/.kube/kubeconfig-$(params.test-lane)"
+        export HOST_IP=`cat /root/.config/config.ini | grep $(params.test-lane) | cut -d : -f 2 | awk '{print $1}'`
+        export EXEC_KIND="ssh -i /root/.ssh/ssh-priv -o StrictHostKeyChecking=no root@${HOST_IP}"
+
+        echo "--- Running E2E Test Scenario: $(params.scenario-name) ---"
+        
+        # Navigate to the scenario directory and execute the test
+        cd "$(workspaces.source.path)/mnp-nft-bridge/test/e2e/scenarios/$(params.scenario-name)"
+        
+        # The execute.sh script will use the environment variables we set
+        chmod +x ./execute.sh && ./execute.sh
+        EXIT_CODE=$?
+
+        if [ "$EXIT_CODE" -eq 0 ]; then
+          echo "Scenario $(params.scenario-name) PASSED."
+          echo -n "PASSED" > $(results.status.path)
+        else
+          echo "Scenario $(params.scenario-name) FAILED with exit code ${EXIT_CODE}."
+          echo -n "FAILED" > $(results.status.path)
+        fi
+
+        echo "--- E2E Test Scenario '$(params.scenario-name)' Finished ---"
+
+  volumes:
+    - name: ssh-keys
+      secret:
+        secretName: lane-credentials
+        defaultMode: 0600
+        items:
+          - key: ssh-priv
+            path: ssh-priv
+          - key: known_hosts
+            path: known_hosts
+    - name: kubeconfigs
+      secret:
+        secretName: lane-configs
+        defaultMode: 0600
+        items:
+          - key: kubeconfig-1-31
+            path: kubeconfig-1-31
+          - key: kubeconfig-1-32
+            path: kubeconfig-1-32
+          - key: kubeconfig-1-33
+            path: kubeconfig-1-33
+          - key: status
+            path: status
+    - name: lane-config
+      configMap:
+        name: lane-config
+        items:
+          - key: config.ini
+            path: config.ini
+

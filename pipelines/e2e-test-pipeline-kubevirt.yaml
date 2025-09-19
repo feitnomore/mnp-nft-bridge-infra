@@ -1,0 +1,778 @@
+# Copyright 2025 Marcelo Parisi (github.com/feitnomore)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: e2e-test-pipeline-kubevirt
+  namespace: mnp-cicd
+spec:
+  description: A full E2E test pipeline that clones the repo, and run tasks.
+  params:
+    - name: IMAGE_REGISTRY
+      description: The registry URL.
+      type: string
+    - name: CLI_IMAGE_NAME
+      description: image name.
+      type: string
+    - name: CLI_IMAGE_TAG
+      description: image tag.
+      type: string
+    - name: CRTL_IMAGE_NAME
+      description: image name.
+      type: string
+    - name: CRTL_IMAGE_TAG
+      description: image tag.
+      type: string
+    - name: APP_REPO_URL
+      description: "URL of the application Git repository."
+      type: string
+    - name: APP_REPO_BRANCH
+      description: "Revision of the application Git repository."
+      type: string
+      default: "main"
+    - name: test-lane
+      description: "Test lane to be executed"
+    
+
+  workspaces:
+    - name: source-code
+      description: "Workspace for all source code."
+    - name: shared-output
+      description: "Workspace for storing logs and output files."
+
+  tasks:
+    - name: deploy-controller-kubevirt
+      taskRef: { name: deploy-controller-kubevirt }
+      params:
+        - name: test-lane
+          value: $(params.test-lane)
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: CLI_IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: CLI_IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: CRTL_IMAGE_NAME
+          value: $(params.CRTL_IMAGE_NAME)
+        - name: CRTL_IMAGE_TAG
+          value: $(params.CRTL_IMAGE_TAG)
+
+    - name: clone-repo
+      taskRef: { name: git-clone }
+      runAfter: [deploy-controller-kubevirt]
+      params:
+        - name: url
+          value: $(params.APP_REPO_URL)
+        - name: revision
+          value: $(params.APP_REPO_BRANCH)
+        - name: subdirectory
+          value: "mnp-nft-bridge"
+      workspaces:
+        - name: source
+          workspace: source-code
+
+    - name: e2e-controller-multiple-mnps-same-pod
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [clone-repo]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: controller_multiple_mnps_same_pod
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-controller-pod-multiple-interfaces-one-managed
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-controller-multiple-mnps-same-pod]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: controller_pod_multiple_interfaces_one_managed
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-controller-reconcile-orphan-cleanup
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-controller-pod-multiple-interfaces-one-managed]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: controller_reconcile_orphan_cleanup
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-controller-restart-reconciles-state
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-controller-reconcile-orphan-cleanup]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: controller_restart_reconciles_state
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-mnp-create-complex-multi-rule
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-controller-restart-reconciles-state]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: mnp_create_complex_multi_rule
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-mnp-create-egress-podselector
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-mnp-create-complex-multi-rule]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: mnp_create_egress_podselector
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-mnp-create-empty-policy-isolation
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-mnp-create-egress-podselector]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: mnp_create_empty_policy_isolation
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-mnp-create-ingress-ipblock
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-mnp-create-empty-policy-isolation]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: mnp_create_ingress_ipblock
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-mnp-create-ingress-ns-selector
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-mnp-create-ingress-ipblock]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: mnp_create_ingress_ns_selector
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-mnp-delete-after-resource-gone
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-mnp-create-ingress-ns-selector]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: mnp_delete_after_resource_gone
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-mnp-delete-removes-all-resources
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-mnp-delete-after-resource-gone]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: mnp_delete_removes_all_resources
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-mnp-empty-podselector-selects-all-in-ns
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-mnp-delete-removes-all-resources]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: mnp_empty_podselector_selects_all_in_ns
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-mnp-explicit-policytypes-ingress-only
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-mnp-empty-podselector-selects-all-in-ns]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: mnp_explicit_policytypes_ingress_only
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-mnp-invalid-cidr-in-ipblock
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-mnp-explicit-policytypes-ingress-only]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: mnp_invalid_cidr_in_ipblock
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-mnp-update-add-ingress-rule
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-mnp-invalid-cidr-in-ipblock]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: mnp_update_add_ingress_rule
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-mnp-update-change-podselector
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-mnp-update-add-ingress-rule]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: mnp_update_change_podselector
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-mnp-update-modify-ipblock-cidr
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-mnp-update-change-podselector]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: mnp_update_modify_ipblock_cidr
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-mnp-update-remove-egress-section
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-mnp-update-modify-ipblock-cidr]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: mnp_update_remove_egress_section
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-nad-create-activates-mnp
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-mnp-update-remove-egress-section]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: nad_create_activates_mnp
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-nad-delete-referenced
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-nad-create-activates-mnp]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: nad_delete_referenced
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-nad-update-config-no-type-change
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-nad-delete-referenced]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: nad_update_config_no_type_change
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-ns-create-matches-mnp-selector
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-nad-update-config-no-type-change]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: ns_create_matches_mnp_selector
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-ns-delete-removes-mnp-match
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-ns-create-matches-mnp-selector]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: ns_delete_removes_mnp_match
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-ns-update-label-matches-mnp-selector
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-ns-delete-removes-mnp-match]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: ns_update_label_matches_mnp_selector
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-ns-update-label-no-longer-matches-mnp-selector
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-ns-update-label-matches-mnp-selector]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: ns_update_label_no_longer_matches_mnp_selector
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-pod-create-matches-existing-mnp
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-ns-update-label-no-longer-matches-mnp-selector]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: pod_create_matches_existing_mnp
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-pod-create-no-matching-mnp
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-pod-create-matches-existing-mnp]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: pod_create_no_matching_mnp
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-pod-delete-matching-mnp
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-pod-create-no-matching-mnp]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: pod_delete_matching_mnp
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-pod-restarts-same-mac
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-pod-delete-matching-mnp]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: pod_restarts_same_mac
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-pod-update-label-matches-mnp
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-pod-restarts-same-mac]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: pod_update_label_matches_mnp
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+
+    - name: e2e-pod-update-label-no-longer-matches-mnp
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [e2e-pod-update-label-matches-mnp]
+      onError: continue
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: pod_update_label_no_longer_matches_mnp
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: shared-output
+          workspace: shared-output
+
+  finally: 
+    - name: check-overall-status
+      taskRef: { name: check-pipelinerun-status }
+      params:
+        - name: pipelinerun-name
+          value: $(context.pipelineRun.name)
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: CLI_IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: CLI_IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)

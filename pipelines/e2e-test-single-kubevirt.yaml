@@ -1,0 +1,116 @@
+# Copyright 2025 Marcelo Parisi (github.com/feitnomore)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: e2e-test-single-kubevirt
+  namespace: mnp-cicd
+spec:
+  description: Executes a single E2E scenario
+  params:
+    - name: IMAGE_REGISTRY
+      description: The registry URL.
+      type: string
+    - name: CLI_IMAGE_NAME
+      description: image name.
+      type: string
+    - name: CLI_IMAGE_TAG
+      description: image tag.
+      type: string
+    - name: CRTL_IMAGE_NAME
+      description: image name.
+      type: string
+    - name: CRTL_IMAGE_TAG
+      description: image tag.
+      type: string
+    - name: APP_REPO_URL
+      description: "URL of the application Git repository."
+      type: string
+    - name: APP_REPO_BRANCH
+      description: "Revision of the application Git repository."
+      type: string
+      default: "main"
+    - name: test-lane
+      description: "Test lane to be executed"
+    - name: scenario-name
+      description: "E2E Scenario to be executed"
+
+  workspaces:
+    - name: source-code
+      description: "Workspace for all source code."
+    - name: shared-output
+      description: "Workspace for storing logs and output files."
+
+  tasks:
+    - name: deploy-controller-kubevirt
+      taskRef: { name: deploy-controller-kubevirt }
+      params:
+        - name: test-lane
+          value: $(params.test-lane)
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: CLI_IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: CLI_IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: CRTL_IMAGE_NAME
+          value: $(params.CRTL_IMAGE_NAME)
+        - name: CRTL_IMAGE_TAG
+          value: $(params.CRTL_IMAGE_TAG)
+
+    - name: clone-repo
+      taskRef: { name: git-clone }
+      runAfter: [deploy-controller-kubevirt]
+      params:
+        - name: url
+          value: $(params.APP_REPO_URL)
+        - name: revision
+          value: $(params.APP_REPO_BRANCH)
+        - name: subdirectory
+          value: "mnp-nft-bridge"
+      workspaces:
+        - name: source
+          workspace: source-code
+
+    - name: e2e-execute-single-test
+      taskRef: { name: run-full-e2e-test-kubevirt }
+      runAfter: [clone-repo]
+      params:
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: CLI_IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: CLI_IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)
+        - name: scenario-name
+          value: $(params.scenario-name)
+        - name: test-lane
+          value: $(params.test-lane)
+      workspaces:
+        - name: source
+          workspace: source-code
+
+  finally: 
+    - name: check-overall-status
+      taskRef: { name: check-pipelinerun-status }
+      params:
+        - name: pipelinerun-name
+          value: $(context.pipelineRun.name)
+        - name: IMAGE_REGISTRY
+          value: $(params.IMAGE_REGISTRY)
+        - name: CLI_IMAGE_NAME
+          value: $(params.CLI_IMAGE_NAME)
+        - name: CLI_IMAGE_TAG
+          value: $(params.CLI_IMAGE_TAG)

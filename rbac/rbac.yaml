@@ -1,0 +1,93 @@
+# Copyright 2025 Marcelo Parisi (github.com/feitnomore)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mnp-cicd-reader
+  namespace: mnp-cicd
+rules:
+- apiGroups: ["tekton.dev"]
+  resources: ["taskruns", "pipelineruns", "tasks"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""] # Core API group para Pods
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mnp-cicd-runner
+  namespace: mnp-cicd
+rules:
+- apiGroups: ["tekton.dev"]
+  resources: ["pipelineruns","taskruns"]
+  verbs: ["create"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mnp-cicd-pruner
+  namespace: mnp-cicd
+rules:
+- apiGroups: ["tekton.dev"]
+  resources: ["pipelineruns","taskruns"]
+  verbs: ["delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mnp-cicd-reader-binding
+  namespace: mnp-cicd
+subjects:
+- kind: ServiceAccount
+  name: mnp-cicd-reader
+  namespace: mnp-cicd
+roleRef:
+  kind: Role
+  name: mnp-cicd-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mnp-cicd-runner-binding
+  namespace: mnp-cicd
+subjects:
+- kind: ServiceAccount
+  name: mnp-cicd-runner
+  namespace: mnp-cicd
+roleRef:
+  kind: Role
+  name: mnp-cicd-runner
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mnp-cicd-pruner-binding
+  namespace: mnp-cicd
+subjects:
+- kind: ServiceAccount
+  name: mnp-cicd-pruner
+  namespace: mnp-cicd
+roleRef:
+  kind: Role
+  name: mnp-cicd-pruner
+  apiGroup: rbac.authorization.k8s.io
