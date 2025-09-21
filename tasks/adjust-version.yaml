@@ -72,8 +72,15 @@ spec:
 
         sed -i 's|var version = "${OLD_VERSION}"|var version = "${NEW_VERSION}"|g' cmd/mnp-nft-bridge/root.go
 
-        yq -i '.spec.template.spec.containers[0].image = "mnp-nft-bridge:v${NEW_VERSION}"' charts/deploy.yaml
-        yq -i '.metadata.labels.version = "v${NEW_VERSION}"' charts/deploy.yaml
-        yq -i '.spec.template.metadata.labels.version = "v${NEW_VERSION}"' charts/deploy.yaml
+        
+        if [ ${NEW_VERSION} != "dev" ]
+          yq -i '.spec.template.spec.containers[0].image = "mnp-nft-bridge:v${NEW_VERSION}"' charts/deploy.yaml
+          yq -i '.metadata.labels.version = "v${NEW_VERSION}"' charts/deploy.yaml
+          yq -i '.spec.template.metadata.labels.version = "v${NEW_VERSION}"' charts/deploy.yaml
+          cp charts/deploy.yaml ${OUTPUT_DIR}/deploy-v${NEW_VERSION}.yaml
+        else
+          yq -i '.spec.template.spec.containers[0].image = "mnp-nft-bridge:latest"' charts/deploy.yaml
+          yq -i '.metadata.labels.version = "dev"' charts/deploy.yaml
+          yq -i '.spec.template.metadata.labels.version = "dev"' charts/deploy.yaml
+        fi
 
-        cp charts/deploy.yaml ${OUTPUT_DIR}/deploy.yaml
