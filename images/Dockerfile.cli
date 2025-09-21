@@ -24,6 +24,7 @@ ARG KUBECTL_VERSION="v1.30.4" # Use a specific version for reproducibility
 ARG HELM_VERSION="v3.15.2"
 ARG KUSTOMIZE_VERSION="v5.4.2"
 ARG JQ_VERSION="1.7.1"
+ARG YQ_VERSION="v4.47.2"
 ARG TKN_VERSION="0.41.1"
 
 # YAMLs needed to execute tasks/pipelines
@@ -80,6 +81,9 @@ RUN curl -Lo /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/ki
     # JQ
     curl -Lo /usr/local/bin/jq "https://github.com/stedolan/jq/releases/download/jq-${JQ_VERSION}/jq-linux-amd64" && \
     chmod +x /usr/local/bin/jq && \
+    # YQ
+    curl -Lo /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" && \
+    chmod +x /usr/local/bin/yq && \
     # TKN
     curl -Lo tekton.tar.gz "https://github.com/tektoncd/cli/releases/download/v0.41.1/tkn_${TKN_VERSION}_Linux_x86_64.tar.gz" && \
     tar -xzf tekton.tar.gz && \
@@ -92,6 +96,7 @@ RUN kind version && \
     helm version && \
     kustomize version && \
     jq --version && \
+    yq --version && \
     git version && \
     tkn version
 
