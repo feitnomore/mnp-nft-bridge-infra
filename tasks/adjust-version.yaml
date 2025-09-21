@@ -1,0 +1,79 @@
+# Copyright 2025 Marcelo Parisi (github.com/feitnomore)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: adjust-version
+  namespace: mnp-cicd
+spec:
+  description: Adjust artifact version on repo
+  params:
+    - name: SUBDIRECTORY
+      description: >-
+        Relative path within the workspace where the repository should be cloned.
+        If empty, clones to the root of the workspace.
+      type: string
+      default: ""
+    - name: OLD_VERSION
+      description: Actual version.
+      type: string
+    - name: NEW_VERSION
+      description: New version.
+      type: string
+    - name: IMAGE_REGISTRY
+      description: The registry URL.
+      type: string
+    - name: CLI_IMAGE_NAME
+      description: image name.
+      type: string
+    - name: CLI_IMAGE_TAG
+      description: image tag.
+      type: string
+
+  workspaces:
+    - name: source
+      description: The workspace where the Git repository will be cloned.
+    - name: shared-output
+      description: "Workspace for storing logs and output files."
+
+  steps:
+    - name: adjust-version
+      image: $(params.IMAGE_REGISTRY)/$(params.CLI_IMAGE_NAME):$(params.CLI_IMAGE_TAG)
+      env:
+        - name: OLD_VERSION
+          value: $(params.OLD_VERSION)
+        - name: NEW_VERSION
+          value: $(params.NEW_VERSION)
+      workingDir: $(workspaces.source.path)/$(params.SUBDIRECTORY)
+      script: |
+        #!/bin/bash
+        set -e
+
+        # Parameters
+        PIPELINERUN_NAME="$(params.pipelinerun-name)"
+        OUTPUT_DIR="/workspace/shared-output/${PIPELINERUN_NAME}"
+
+        echo "--- Adjusting source code version ---"
+
+        # Create output directory
+        mkdir -p "${OUTPUT_DIR}"
+
+        sed -i 's|var version = "${OLD_VERSION}"|var version = "${NEW_VERSION}"|g' cmd/mnp-nft-bridge/root.go
+
+        yq -i '.spec.template.spec.containers[0].image = "mnp-nft-bridge:v${NEW_VERSION}"' charts/deploy.yaml
+        yq -i '.metadata.labels.version = "v${NEW_VERSION}"' charts/deploy.yaml
+        yq -i '.spec.template.metadata.labels.version = "v${NEW_VERSION}"' charts/deploy.yaml
+
+        cp charts/deploy.yaml ${OUTPUT_DIR}/deploy.yaml
