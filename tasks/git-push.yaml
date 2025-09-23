@@ -49,17 +49,24 @@ spec:
       workingDir: $(workspaces.source.path)/$(params.SUBDIRECTORY)
       script: |
         #!/bin/sh
+        set -e
 
         echo "--- ALPINE/GIT RELEASE SCRIPT START ---"
 
-        git config --global credential.helper store
-        echo "https://oauth2:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+        git checkout main
+
+        sleep 2s
+
+        git config --global user.email "kubevirt-manager@kubevirt-manager.io"
+        git config --global user.name "kubevirt-manager-cicd"
+
 
         if [ ${THIS_VERSION} != "dev" ]
         then
           git tag -a v${THIS_VERSION} -m "Release: ${THIS_VERSION}"
         fi
 
-        git push origin main --tags
+        git push https://oauth2:${GITHUB_TOKEN}@github.com/kubevirt-manager/mnp-nft-bridge.git --tags
+        git push https://oauth2:${GITHUB_TOKEN}@github.com/kubevirt-manager/mnp-nft-bridge.git main --tags
 
         echo "--- ALPINE/GIT RELEASE SCRIPT END ---"

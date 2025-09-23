@@ -86,6 +86,7 @@ spec:
     - name: release-version
       taskRef:
         name: adjust-version
+      runAfter: [clone-app-repository]
       params:
         - name: pipelinerun-name
           value: $(context.pipelineRun.name)
@@ -104,11 +105,13 @@ spec:
       workspaces:
         - name: source
           workspace: shared-source
+        - name: shared-output
+          workspace: shared-output
 
     - name: fmt 
       taskRef:
         name: golang-make
-      runAfter: [clone-app-repository]
+      runAfter: [release-version]
       params:
         - name: MAKE_TARGETS
           value: "fmt" 
@@ -125,7 +128,7 @@ spec:
     - name: lint 
       taskRef:
         name: golang-make
-      runAfter: [clone-app-repository]
+      runAfter: [release-version]
       params:
         - name: MAKE_TARGETS
           value: "lint" 
@@ -250,6 +253,7 @@ spec:
     - name: push-release-version
       taskRef:
         name: git-push
+      runAfter: [run-trivy]
       params:
         - name: SUBDIRECTORY
           value: $(params.app-clone-subdir)
@@ -262,6 +266,7 @@ spec:
     - name: dev-version
       taskRef:
         name: adjust-version
+      runAfter: [push-release-version]
       params:
         - name: pipelinerun-name
           value: $(context.pipelineRun.name)
@@ -280,10 +285,13 @@ spec:
       workspaces:
         - name: source
           workspace: shared-source
+        - name: shared-output
+          workspace: shared-output
 
     - name: push-dev-version
       taskRef:
         name: git-push
+      runAfter: [dev-version]
       params:
         - name: SUBDIRECTORY
           value: $(params.app-clone-subdir)
