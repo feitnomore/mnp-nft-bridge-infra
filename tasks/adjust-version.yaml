@@ -20,6 +20,9 @@ metadata:
 spec:
   description: Adjust artifact version on repo
   params:
+    - name: pipelinerun-name
+      description: "The name of the current PipelineRun to inspect."
+      type: string
     - name: SUBDIRECTORY
       description: >-
         Relative path within the workspace where the repository should be cloned.
@@ -70,17 +73,25 @@ spec:
         # Create output directory
         mkdir -p "${OUTPUT_DIR}"
 
-        sed -i 's|var version = "${OLD_VERSION}"|var version = "${NEW_VERSION}"|g' cmd/mnp-nft-bridge/root.go
+        sed -i "s|= \"${OLD_VERSION}\"|= \"${NEW_VERSION}\"|g" cmd/mnp-nft-bridge/root.go
+
+        echo "----- root.go -----"
+        cat cmd/mnp-nft-bridge/root.go | grep "var version"
 
         
         if [ ${NEW_VERSION} != "dev" ]
-          yq -i '.spec.template.spec.containers[0].image = "mnp-nft-bridge:v${NEW_VERSION}"' charts/deploy.yaml
-          yq -i '.metadata.labels.version = "v${NEW_VERSION}"' charts/deploy.yaml
-          yq -i '.spec.template.metadata.labels.version = "v${NEW_VERSION}"' charts/deploy.yaml
+        then
+          yq -i "select(.kind == \"DaemonSet\").spec.template.spec.containers[0].image = \"kubevirt-manager/mnp-nft-bridge:v${NEW_VERSION}\"" charts/deploy.yaml
+          yq -i "select(.kind == \"DaemonSet\").metadata.labels.version = \"v${NEW_VERSION}\"" charts/deploy.yaml
+          yq -i "select(.kind == \"DaemonSet\").spec.template.metadata.labels.version = \"v${NEW_VERSION}\"" charts/deploy.yaml
           cp charts/deploy.yaml ${OUTPUT_DIR}/deploy-v${NEW_VERSION}.yaml
         else
-          yq -i '.spec.template.spec.containers[0].image = "mnp-nft-bridge:latest"' charts/deploy.yaml
-          yq -i '.metadata.labels.version = "dev"' charts/deploy.yaml
-          yq -i '.spec.template.metadata.labels.version = "dev"' charts/deploy.yaml
+          yq -i "select(.kind == \"DaemonSet\").spec.template.spec.containers[0].image = \"kubevirt-manager/mnp-nft-bridge:latest\"" charts/deploy.yaml
+          yq -i "select(.kind == \"DaemonSet\").metadata.labels.version = \"dev\"" charts/deploy.yaml
+          yq -i "select(.kind == \"DaemonSet\").spec.template.metadata.labels.version = \"dev\"" charts/deploy.yaml
         fi
+
+        echo "----- deploy.yaml -----"
+        cat charts/deploy.yaml | grep image | grep -vi pull
+        cat charts/deploy.yaml | grep version
 
