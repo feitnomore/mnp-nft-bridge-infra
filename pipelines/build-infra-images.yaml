@@ -129,4 +129,4 @@ spec:
         - name: CLI_IMAGE_NAME
           value: $(params.CLI_IMAGE_NAME)
         - name: CLI_IMAGE_TAG
-          value: $(params.CLI_IMAGE_TAG)
+          value: "latest"

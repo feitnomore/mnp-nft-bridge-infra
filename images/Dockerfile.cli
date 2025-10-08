@@ -102,8 +102,7 @@ RUN kind version && \
     jq --version && \
     yq --version && \
     git version && \
-    tkn version && \
-    virtctl version
+    tkn version 
 
 # Set a default command for interactive use
 CMD ["/bin/bash"]
