@@ -39,6 +39,10 @@ spec:
       value: "${CLI_IMAGE_NAME}"
     - name: CLI_IMAGE_TAG
       value: "${CLI_IMAGE_TAG}"
+    - name: GO_IMAGE_NAME
+      value: "${GO_IMAGE_NAME}"
+    - name: GO_IMAGE_TAG
+      value: "${GO_IMAGE_TAG}"
     - name: IMAGE_NAME
       value: "${IMAGE_NAME}"
     - name: IMAGE_TAG

@@ -44,6 +44,12 @@ spec:
     - name: CLI_IMAGE_TAG
       description: image tag.
       type: string
+    - name: GO_IMAGE_NAME
+      description: image name.
+      type: string
+    - name: GO_IMAGE_TAG
+      description: image tag.
+      type: string
     - name: IMAGE_NAME
       description: image name.
       type: string
@@ -90,6 +96,12 @@ spec:
           value: "$(params.app-clone-subdir)/$(params.makefile-subdir-in-app)"
         - name: pipelinerun-name
           value: $(context.pipelineRun.name)
+        - name: IMAGE_REGISTRY
+          value: "$(params.IMAGE_REGISTRY)"
+        - name: GO_IMAGE_NAME
+          value: $(params.GO_IMAGE_NAME)
+        - name: GO_IMAGE_TAG
+          value: $(params.GO_IMAGE_TAG)
       workspaces:
         - name: source
           workspace: shared-source
@@ -107,6 +119,12 @@ spec:
           value: "$(params.app-clone-subdir)/$(params.makefile-subdir-in-app)"
         - name: pipelinerun-name
           value: $(context.pipelineRun.name)
+        - name: IMAGE_REGISTRY
+          value: "$(params.IMAGE_REGISTRY)"
+        - name: GO_IMAGE_NAME
+          value: $(params.GO_IMAGE_NAME)
+        - name: GO_IMAGE_TAG
+          value: $(params.GO_IMAGE_TAG)
       workspaces:
         - name: source
           workspace: shared-source
@@ -124,6 +142,12 @@ spec:
           value: "$(params.app-clone-subdir)/$(params.makefile-subdir-in-app)"
         - name: pipelinerun-name
           value: $(context.pipelineRun.name)
+        - name: IMAGE_REGISTRY
+          value: "$(params.IMAGE_REGISTRY)"
+        - name: GO_IMAGE_NAME
+          value: $(params.GO_IMAGE_NAME)
+        - name: GO_IMAGE_TAG
+          value: $(params.GO_IMAGE_TAG)
       workspaces:
         - name: source
           workspace: shared-source
@@ -141,6 +165,12 @@ spec:
           value: "$(params.app-clone-subdir)/$(params.makefile-subdir-in-app)"
         - name: pipelinerun-name
           value: $(context.pipelineRun.name)
+        - name: IMAGE_REGISTRY
+          value: "$(params.IMAGE_REGISTRY)"
+        - name: GO_IMAGE_NAME
+          value: $(params.GO_IMAGE_NAME)
+        - name: GO_IMAGE_TAG
+          value: $(params.GO_IMAGE_TAG)
       workspaces:
         - name: source
           workspace: shared-source
@@ -158,6 +188,12 @@ spec:
           value: "$(params.app-clone-subdir)/$(params.makefile-subdir-in-app)"
         - name: pipelinerun-name
           value: $(context.pipelineRun.name)
+        - name: IMAGE_REGISTRY
+          value: "$(params.IMAGE_REGISTRY)"
+        - name: GO_IMAGE_NAME
+          value: $(params.GO_IMAGE_NAME)
+        - name: GO_IMAGE_TAG
+          value: $(params.GO_IMAGE_TAG)
       workspaces:
         - name: source
           workspace: shared-source
@@ -175,6 +211,12 @@ spec:
           value: "$(params.app-clone-subdir)/$(params.makefile-subdir-in-app)"
         - name: pipelinerun-name
           value: $(context.pipelineRun.name)
+        - name: IMAGE_REGISTRY
+          value: "$(params.IMAGE_REGISTRY)"
+        - name: GO_IMAGE_NAME
+          value: $(params.GO_IMAGE_NAME)
+        - name: GO_IMAGE_TAG
+          value: $(params.GO_IMAGE_TAG)
       workspaces:
         - name: source
           workspace: shared-source

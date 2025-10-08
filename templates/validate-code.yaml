@@ -43,6 +43,10 @@ spec:
       value: "${IMAGE_NAME}"
     - name: IMAGE_TAG
       value: "${IMAGE_TAG}"
+    - name: GO_IMAGE_NAME
+      value: "${GO_IMAGE_NAME}"
+    - name: GO_IMAGE_TAG
+      value: "${GO_IMAGE_TAG}"
 
   workspaces:
     - name: shared-source

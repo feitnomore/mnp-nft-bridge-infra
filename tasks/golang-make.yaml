@@ -31,6 +31,15 @@ spec:
     - name: pipelinerun-name
       description: "The name of the current PipelineRun to inspect."
       type: string
+    - name: IMAGE_REGISTRY
+      description: The registry URL.
+      type: string
+    - name: GO_IMAGE_NAME
+      description: image name.
+      type: string
+    - name: GO_IMAGE_TAG
+      description: image tag.
+      type: string
 
   workspaces:
     - name: source
@@ -43,7 +52,7 @@ spec:
 
   steps:
     - name: run-golang-make
-      image: registry.wifi.feitoza.com.br/docker-repo/golang:latest
+      image: $(params.IMAGE_REGISTRY)/$(params.GO_IMAGE_NAME):$(params.GO_IMAGE_TAG)
       imagePullPolicy: Always
       workingDir: $(workspaces.source.path)/$(params.SUBDIRECTORY)
       script: |
