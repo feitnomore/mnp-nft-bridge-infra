@@ -115,5 +115,5 @@ subjects:
   namespace: mnp-cicd
 roleRef:
   kind: Role
-  name: mnp-cicd-virtcl
+  name: mnp-cicd-virtctl
   apiGroup: rbac.authorization.k8s.io
