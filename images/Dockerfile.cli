@@ -26,6 +26,7 @@ ARG KUSTOMIZE_VERSION="v5.4.2"
 ARG JQ_VERSION="1.7.1"
 ARG YQ_VERSION="v4.47.2"
 ARG TKN_VERSION="0.41.1"
+ARG VIRTCTL_VERSION="v1.5.3"
 
 # YAMLs needed to execute tasks/pipelines
 COPY templates/*.yaml /opt/
@@ -85,10 +86,13 @@ RUN curl -Lo /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/ki
     curl -Lo /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" && \
     chmod +x /usr/local/bin/yq && \
     # TKN
-    curl -Lo tekton.tar.gz "https://github.com/tektoncd/cli/releases/download/v0.41.1/tkn_${TKN_VERSION}_Linux_x86_64.tar.gz" && \
+    curl -Lo tekton.tar.gz "https://github.com/tektoncd/cli/releases/download/v${TKN_VERSION}/tkn_${TKN_VERSION}_Linux_x86_64.tar.gz" && \
     tar -xzf tekton.tar.gz && \
     mv tkn /usr/local/bin/tkn && \
-    rm -rf LICENSE README.md
+    rm -rf LICENSE README.md && \
+    # VIRTCTL
+    curl -Lo /usr/local/bin/virtctl "https://github.com/kubevirt/kubevirt/releases/download/${VIRTCTL_VERSION}/virtctl-${VIRTCTL_VERSION}-linux-amd64" && \
+    chmod +x /usr/local/bin/virtctl
 
 # Verify installations to ensure the image is built correctly
 RUN kind version && \
@@ -98,7 +102,7 @@ RUN kind version && \
     jq --version && \
     yq --version && \
     git version && \
-    tkn version
+    tkn version 
 
 # Set a default command for interactive use
 CMD ["/bin/bash"]

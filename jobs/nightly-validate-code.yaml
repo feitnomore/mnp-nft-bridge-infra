@@ -54,6 +54,10 @@ spec:
               value: "mnp-nft-bridge"
             - name: IMAGE_TAG
               value: "nightly"
+            - name: GO_IMAGE_NAME
+              value: "golang"
+            - name: GO_IMAGE_TAG
+              value: "nightly"
             command:
             - /bin/bash
             - -c

@@ -110,6 +110,8 @@ spec:
             path: kubeconfig-1-32
           - key: kubeconfig-1-33
             path: kubeconfig-1-33
+          - key: kubeconfig-1-34
+            path: kubeconfig-1-34
           - key: status
             path: status
     - name: lane-config

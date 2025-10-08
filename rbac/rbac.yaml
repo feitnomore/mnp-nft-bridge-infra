@@ -49,6 +49,17 @@ rules:
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mnp-cicd-virtctl
+  namespace: mnp-cicd
+rules:
+- apiGroups: ["subresources.kubevirt.io"]
+  resources: ["virtualmachines/start", "virtualmachines/stop"]
+  verbs: ["update"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: mnp-cicd-reader-binding
@@ -90,4 +101,19 @@ subjects:
 roleRef:
   kind: Role
   name: mnp-cicd-pruner
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mnp-cicd-virtctl-binding
+  namespace: mnp-cicd
+subjects:
+- kind: ServiceAccount
+  name: mnp-cicd-virtctl
+  namespace: mnp-cicd
+roleRef:
+  kind: Role
+  name: mnp-cicd-virtcl
   apiGroup: rbac.authorization.k8s.io
