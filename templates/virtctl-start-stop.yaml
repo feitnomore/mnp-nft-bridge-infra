@@ -1,0 +1,48 @@
+# Copyright 2025 Marcelo Parisi (github.com/feitnomore)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: ${PRE}virtctl-${THIS_CMD}-${THIS_LANE}-
+  namespace: mnp-cicd
+  labels:
+    cicd/lane: ${THIS_LANE}
+    cicd/image: ${IMAGE}
+    cicd/branch: ${BRANCH}
+    cicd/project: ${PROJECT}
+spec:
+  pipelineRef:
+    name: virtctl-start-stop
+  timeouts:
+    pipeline: 1h0m0s
+    tasks: 1h0m0s
+  params:
+    - name: PRE
+      value: "nightly-"
+    - name: IMAGE_REGISTRY
+      value: "kubevirtmanager"
+    - name: CLI_IMAGE_NAME
+      value: "${CLI_IMAGE_NAME}"
+    - name: CLI_IMAGE_TAG
+      value: "${CLI_IMAGE_TAG}"
+    - name: THIS_CMD
+      value: "${THIS_CMD}"
+    - name: THIS_LANE
+      value: "${THIS_LANE}"
+      
+  workspaces:
+    - name: shared-output
+      persistentVolumeClaim:
+        claimName: cicd-output
