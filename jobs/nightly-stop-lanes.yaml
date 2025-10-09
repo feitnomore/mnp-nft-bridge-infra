@@ -18,7 +18,7 @@ metadata:
   name: nightly-stop-lanes
   namespace: mnp-cicd
 spec:
-  schedule: "50 03 * * *"
+  schedule: "55 03 * * *"
   timeZone: "America/Sao_Paulo"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 5
