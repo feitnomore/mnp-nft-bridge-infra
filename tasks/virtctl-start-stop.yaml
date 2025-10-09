@@ -59,9 +59,15 @@ spec:
         #!/bin/sh
         set -e
 
-        echo "--- ${THIS_LANE} -> ${THIS_CMD} ---"
-
-         /usr/local/bin/virtctl ${THIS_CMD} lane-${THIS_LANE} -n mnp-cicd
+        echo "--- Lane: ${THIS_LANE} -> ${THIS_CMD} ---"
+        if [ ${THIS_CMD} = "start" ]
+        then
+          /usr/local/bin/virtctl ${THIS_CMD} lane-${THIS_LANE} -n mnp-cicd
+        elif [ ${THIS_CMD} = "stop" ]
+        then
+          /usr/local/bin/virtctl ${THIS_CMD} lane-${THIS_LANE} -n mnp-cicd
+          /usr/local/bin/kubectl delete vmi lane-${THIS_LANE} -n mnp-cicd --grace-period=0
+        fi
 
   volumes:
     - name: kubeconfigs
