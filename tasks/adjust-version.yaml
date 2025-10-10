@@ -54,6 +54,7 @@ spec:
   steps:
     - name: adjust-version
       image: $(params.IMAGE_REGISTRY)/$(params.CLI_IMAGE_NAME):$(params.CLI_IMAGE_TAG)
+      imagePullPolicy: Always
       env:
         - name: OLD_VERSION
           value: $(params.OLD_VERSION)
