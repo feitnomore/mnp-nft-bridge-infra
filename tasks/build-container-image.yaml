@@ -53,6 +53,7 @@ spec:
   steps:
     - name: build
       image: quay.io/buildah/stable:latest
+      imagePullPolicy: Always
       workingDir: $(workspaces.source.path)
       script: |
         #!/bin/bash
@@ -76,6 +77,7 @@ spec:
 
     - name: push
       image: quay.io/buildah/stable:latest
+      imagePullPolicy: Always
       workingDir: $(workspaces.source.path)
       env:
         - name: DOCKER_CONFIG

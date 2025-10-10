@@ -36,6 +36,7 @@ spec:
   steps:
     - name: check-taskrun-statuses
       image: $(params.IMAGE_REGISTRY)/$(params.CLI_IMAGE_NAME):$(params.CLI_IMAGE_TAG)
+      imagePullPolicy: Always
       env:
         - name: KUBECONFIG
           value: "$(workspaces.kubeconfig.path)/kubeconfig"
