@@ -97,10 +97,18 @@ spec:
         - name: dockerconfig
           workspace: docker-credentials
 
+    - name: wait-build-golang
+      taskRef:
+        name: wait
+      runAfter: [build-golang]
+      params:
+        - name: DURATION
+          value: "30"
+
     - name: build-cli-tools
       taskRef:
         name: build-container-image
-      runAfter: [git-clone]
+      runAfter: [wait-build-golang]
       params:
         - name: IMAGE_REGISTRY
           value: $(params.IMAGE_REGISTRY)
