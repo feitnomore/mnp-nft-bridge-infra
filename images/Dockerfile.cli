@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Use a stable Ubuntu LTS release as the base
-FROM ubuntu:22.04
+FROM docker.io/ubuntu:22.04
 
 # Set non-interactive frontend for apt-get to prevent it from hanging
 ENV DEBIAN_FRONTEND=noninteractive
@@ -90,6 +90,7 @@ RUN curl -Lo /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/ki
     tar -xzf tekton.tar.gz && \
     mv tkn /usr/local/bin/tkn && \
     rm -rf LICENSE README.md && \
+    rm -rf tekton.tar.gz && \
     # VIRTCTL
     curl -Lo /usr/local/bin/virtctl "https://github.com/kubevirt/kubevirt/releases/download/${VIRTCTL_VERSION}/virtctl-${VIRTCTL_VERSION}-linux-amd64" && \
     chmod +x /usr/local/bin/virtctl

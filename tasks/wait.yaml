@@ -12,15 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Using Golang 1.24 as starting point
-FROM docker.io/golang:1.24-bookworm
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: wait
+  namespace: mnp-cicd
+spec:
+  description: Clones a Git repository using alpine/git.
+  params:
+    - name: DURATION
+      description: 'Duração da espera em segundos (ex: 120 para 2 minutos)'
+      type: string
+      default: '120' # 120 seconds
 
-# Adding few packages
-RUN apt-get update && \
-    apt-get -y install make && \
-    # goimports
-    go install golang.org/x/tools/cmd/goimports@latest && \
-    # govulncheck
-    go install golang.org/x/vuln/cmd/govulncheck@latest && \
-    # golang-lint
-    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin latest
+  steps:
+    - name: wait
+      image: ubuntu
+      script: |
+        #!/bin/bash
+        DURATION=$(params.DURATION)
+        echo "--- WAIT SCRIPT START ---"
+        echo "Waiting ${DURATION} seconds..."
+        sleep ${DURATION}
+        echo "--- WAIT SCRIPT END ---"
