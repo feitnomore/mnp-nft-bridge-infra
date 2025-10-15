@@ -52,6 +52,8 @@ spec:
             - /bin/bash
             - -c
             - |
+              export THIS_LANE="1-31"; \
+              envsubst < /opt/virtctl-start-stop.yaml | kubectl create -f -; \
               export THIS_LANE="1-32"; \
               envsubst < /opt/virtctl-start-stop.yaml | kubectl create -f -; \
               export THIS_LANE="1-33"; \
