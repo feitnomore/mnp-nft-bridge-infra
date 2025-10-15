@@ -60,13 +60,26 @@ spec:
         set -e
 
         echo "--- Lane: ${THIS_LANE} -> ${THIS_CMD} ---"
+        
+        PRINTABLE_STATUS=`/usr/local/bin/kubectl get vm lane-${THIS_LANE} -n mnp-cicd -o json | /usr/local/bin/jq -r '.status.printableStatus'`
+
         if [ ${THIS_CMD} = "start" ]
         then
-          /usr/local/bin/virtctl ${THIS_CMD} lane-${THIS_LANE} -n mnp-cicd
+          if [ ${PRINTABLE_STATUS} = "Stopped" ]
+          then
+            /usr/local/bin/virtctl ${THIS_CMD} lane-${THIS_LANE} -n mnp-cicd
+          else 
+            echo "lane-${THIS_LANE} not Stopped"
+          fi
         elif [ ${THIS_CMD} = "stop" ]
         then
-          /usr/local/bin/virtctl ${THIS_CMD} lane-${THIS_LANE} -n mnp-cicd
-          /usr/local/bin/kubectl delete vmi lane-${THIS_LANE} -n mnp-cicd --grace-period=0
+          if [ ${PRINTABLE_STATUS} = "Running" ]
+          then
+            /usr/local/bin/virtctl ${THIS_CMD} lane-${THIS_LANE} -n mnp-cicd
+            /usr/local/bin/kubectl delete vmi lane-${THIS_LANE} -n mnp-cicd --grace-period=0
+          else 
+            echo "lane-${THIS_LANE} not Running"
+          fi
         fi
 
   volumes:
