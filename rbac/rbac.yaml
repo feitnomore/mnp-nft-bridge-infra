@@ -58,6 +58,9 @@ rules:
   resources: ["virtualmachines/start", "virtualmachines/stop"]
   verbs: ["update"]
 - apiGroups: ["kubevirt.io"]
+  resources: ["virtualmachines"]
+  verbs: ["get"]
+- apiGroups: ["kubevirt.io"]
   resources: ["virtualmachineinstances"]
   verbs: ["delete"]
 
