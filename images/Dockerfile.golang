@@ -23,4 +23,4 @@ RUN apt-get update && \
     # govulncheck
     go install golang.org/x/vuln/cmd/govulncheck@latest && \
     # golang-lint
-    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin latest
+    curl --retry 5 --retry-delay 20 --retry-max-time 100 -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin latest
